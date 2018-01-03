@@ -12,7 +12,7 @@ So let's talk about performance now. Doing a copy every time you ask for a state
 
 ## Example you are used to see
 
-```
+```javascript
 export class Example
 {
 	state;
@@ -50,7 +50,7 @@ export class Example
 
 ## Better example
 
-```
+```javascript
 // Seamless-Immutable, because it's cooler than Immutable.js
 feedMammals( state, territoryId ) // reducer
 {
@@ -92,7 +92,7 @@ feedAnimals( territoryId )
 
 Creates a new branch of data.
 
-```
+```javascript
 const newState = Branch.create( oldState );
 ```
 
@@ -101,7 +101,7 @@ const newState = Branch.create( oldState );
 
 Returns true, if target was created by Branch.js.
 
-```
+```javascript
 const x = { a: 5 };
 const y = Branch.create( x );
 
@@ -113,7 +113,7 @@ console.log( Branch.isBranch( y ) ); // true
 
 Freeze object, if you feel like you need it. It works on proxy level and it bans mutating an object.
 
-```
+```javascript
 const state = Branch.create({ x: 5 });
 Branch.freeze( state );
 
@@ -125,7 +125,7 @@ console.log( state.x ); // 5
 
 Returns true, if target is ~~a Disney movie~~ frozen. **It returns false, if object was frozen by Object.freeze(), because it wasn't frozen by Branch.freeze().**
 
-```
+```javascript
 const state = Branch.create({ x: 5 });
 Branch.freeze( state );
 
@@ -136,7 +136,7 @@ console.log( Branch.isFrozen( state ) ); // true
 
 Retuns true, if there were made some changes, since object was created. If you want a deep version look at `hasChanged` method.
 
-```
+```javascript
 const state = Branch.create({ a: 5 });
 
 state.y = 10;
@@ -147,7 +147,7 @@ Branch.isDirty( state ); // true
 
 This returns true, if both targets are based on the same state and they haven't changed. It doesn't deeply compare objects. Hopefully example will be super clear.
 
-```
+```javascript
 const data = { x: 5 };
 const state1 = Branch.create( data );
 const state2 = Branch.create( data );
@@ -168,7 +168,7 @@ Branch.isEqual( data2, state1 ); // false, because state1 is based on data1
 
 Returns true, if something has changed even deeply in Branch.
 
-```
+```javascript
 const state = BRanch.create({ firstLevel: { secondLevel: 10 } });
 state.firstLevel.secondLevel = 20;
 
