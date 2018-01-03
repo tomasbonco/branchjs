@@ -1,10 +1,15 @@
-const FROZEN_FLAG = Symbol( 'patch-frozen' );
-const IMMUTABLE_FLAG = Symbol( 'patch' );
-const DIRTY_FLAG = Symbol( 'patch-dirty' );
-const EQUALS_FLAG = Symbol( 'patch-equals' );
+const FROZEN_FLAG = Symbol( 'branch-frozen' );
+const IMMUTABLE_FLAG = Symbol( 'branch' );
+const DIRTY_FLAG = Symbol( 'branch-dirty' );
+const EQUALS_FLAG = Symbol( 'branch-equals' );
 
-export class Patch
+export class Branch
 {
+	/**
+	 * Creates new proxy over object and that's why returns a new reference.
+	 * @param {Object} target - state that you want to "copy"
+	 * @returns {Object-like} new branch of state
+	 */
 	static create( target: Object )
     {
         if ( target !== Object( target ) )
@@ -16,12 +21,16 @@ export class Patch
         {
             return new Proxy( target, new ArrayProxy( target ) );
         }
-        
-        return new Proxy( target, new ObjectProxy() );
+
+        return new Proxy( Object.create( target ), new ObjectProxy() );
     }
 
 
-    static isPatch( target )
+	/**
+	 * Returns true, if target was created using Branch.js
+	 * @param {Object} target - target to be checked
+	 */
+    static isBranch( target: Object )
     {
 		if ( target !== Object( target ) )
 		{
@@ -32,29 +41,39 @@ export class Patch
     }
 
 
+	/**
+	 * Once freezed, object won't accept any changes.
+	 * @param {Object} target - branch to be frozen
+	 * @param {boolean} deep 
+	 */
     static freeze( target: Object, deep: boolean = false ): void
     {
-		if ( target !== Object( target ) )
+		if ( ! Branch.isBranch( target ) )
 		{
-			console.error( 'Non-objects cant be frozen!' );
+			console.error( `Non-branch objects can't be frozen!` );
 			return;
 		}
 
 		target[ FROZEN_FLAG ] = true;
-		
+
 		if ( deep )
 		{
 			Object.keys( target ).forEach( key =>
 			{
-				if ( Patch.isPatch( target[ key ] ) )
+				if ( Branch.isBranch( target[ key ] ) )
 				{
-					Patch.freeze( target[ key ], deep );
+					Branch.freeze( target[ key ], deep );
 				}
 			})
 		}
     }
 
 
+	/**
+	 * Returns true, if object is frozen.
+	 * @param {Object} target - target to be checked
+	 * @returns {boolean} - true, if object is frozen
+	 */
     static isFrozen( target: Object ): boolean
     {
 		if ( target !== Object( target ) )
@@ -66,6 +85,11 @@ export class Patch
 	}
 
 
+	/**
+	 * Returns true, if there were some changes done to object.
+	 * @param {Object} target - target to be checked
+	 * @returns {boolean} - true, if there were some changes done to object
+	 */
 	static isDirty( target: Object ): boolean
 	{
 		if ( target !== Object( target ) )
@@ -75,32 +99,43 @@ export class Patch
 
         return target[ DIRTY_FLAG ];
 	}
-	
 
+
+	/**
+	 * Returns true, if both params are based on same state and they don't have changes.
+	 * @param {any} obj1 - first object
+	 * @param {any} obj2 - second object
+	 * @returns {boolean} - true, if both parameters are based on same state and they don't have changes
+	 */
 	static equals( obj1: any, obj2: any ): boolean
 	{
-		const real1 = Patch.isPatch( obj1 ) ? obj1[ EQUALS_FLAG ] : obj1;
-		const real2 = Patch.isPatch( obj2 ) ? obj2[ EQUALS_FLAG ] : obj2;
+		const real1 = Branch.isBranch( obj1 ) ? obj1[ EQUALS_FLAG ] : obj1;
+		const real2 = Branch.isBranch( obj2 ) ? obj2[ EQUALS_FLAG ] : obj2;
 
 		return real1 === real2;
 	}
 
 
-	static hasChanged( target: Object )
+	/**
+	 * Returns true, if something has changed in target since it was created (works deeply).
+	 * @param {Object} target - target to be checked
+	 * @returns {boolean} true, if target has change since it was created
+	 */
+	static hasChanged( target: Object ): boolean
 	{
-		if ( ! Patch.isPatch( target ) )
+		if ( ! Branch.isBranch( target ) )
 		{
-			return false;
+			return undefined;
 		}
 
-		if ( Patch.isDirty( target ) )
+		if ( Branch.isDirty( target ) )
 		{
 			return true;
 		}
 
 		for ( const key in target )
 		{
-			if ( Patch.hasChanged( target[ key ] ) )
+			if ( Branch.hasChanged( target[ key ] ) )
 			{
 				return true;
 			}
@@ -109,6 +144,7 @@ export class Patch
 		return false;
 	}
 }
+
 
 export class ObjectProxy implements ProxyHandler<any>
 {
@@ -129,6 +165,13 @@ export class ObjectProxy implements ProxyHandler<any>
 		this.isDirty = true;
 		this.deleted.delete( property );
 
+		// You cannot create non-configurable property on proxy, if it is not present on target object.
+		// That's why we do Object.create(), so we can actually create this property, without altering original object.
+		if ( descriptor.configurable === false )
+		{
+			Object.defineProperty( target, property, descriptor );
+		}
+
 		return this.overrideTo( property, undefined, descriptor );
 	}
 
@@ -145,17 +188,12 @@ export class ObjectProxy implements ProxyHandler<any>
 			this.isFrozen = true;
 			return true;
 		}
-		
+
 
         if ( target[ property ] === value )
         {
             // ignore, if there is no change
             return true;
-        }
-
-        if ( value === Object( value ) )
-        {
-            value = Patch.create( value );
         }
 
 		return this.defineProperty( target, property, { writable: true, configurable: true, enumerable: true, value } );
@@ -174,7 +212,7 @@ export class ObjectProxy implements ProxyHandler<any>
             return true;
         }
 
-        return target.hasOwnProperty( property );
+        return target['__proto__'].hasOwnProperty( property );
     }
 
 
@@ -189,7 +227,7 @@ export class ObjectProxy implements ProxyHandler<any>
         {
             return true;
 		}
-		
+
 		if ( property === DIRTY_FLAG )
 		{
 			return this.isDirty;
@@ -197,7 +235,7 @@ export class ObjectProxy implements ProxyHandler<any>
 
 		if ( property === EQUALS_FLAG )
 		{
-			return this.isDirty ? this : target;
+			return this.isDirty ? this : target['__proto__'];
 		}
 
 
@@ -210,20 +248,20 @@ export class ObjectProxy implements ProxyHandler<any>
         {
             return this.overrides[ property ];
 		}
-        
+
 
         const value = target[ property ];
 
-        if ( value === Object( value ) && Object.getOwnPropertyDescriptor( target, property ).configurable === true )
+        if ( value === Object( value ) && target['__proto__'].hasOwnProperty( property ) && Object.getOwnPropertyDescriptor( target['__proto__'], property ).configurable === true )
         {
-			const proxied = Patch.create( value );
+			const proxied = Branch.create( value );
             this.overrideTo( property, proxied );
             return proxied;
         }
 
-        return Reflect.get(target, property, receiver);
+        return Reflect.get( target['__proto__'], property, receiver );
 	}
-	
+
 
 	deleteProperty( target: Object, property: PropertyKey ): boolean
 	{
@@ -243,12 +281,13 @@ export class ObjectProxy implements ProxyHandler<any>
 
 	ownKeys( target: Object ): PropertyKey[]
 	{
-		const originalKeys: PropertyKey[] = Object.keys( target );
+		const originalKeys: PropertyKey[] = Object.keys( target['__proto__'] );
 		const overridenKeys: PropertyKey[] = Object.keys( this.overrides );
 		const possibleKeys: PropertyKey[] = originalKeys.concat( overridenKeys );
 		const keys: PropertyKey[] = possibleKeys.filter( key => ! this.deleted.has( key ) );
+		const uniqueKeys = Array.from( new Set( keys ));
 
-		return keys;
+		return uniqueKeys;
 	}
 
 
@@ -264,9 +303,9 @@ export class ObjectProxy implements ProxyHandler<any>
 			return Object.getOwnPropertyDescriptor( this.overrides, property );
 		}
 
-		return Object.getOwnPropertyDescriptor( target, property );
+		return Object.getOwnPropertyDescriptor( target['__proto__'], property );
 	}
-	
+
 
 	private isOverriden( property )
 	{
@@ -297,7 +336,7 @@ class ArrayProxy implements ProxyHandler<any>
 
 	constructor( target: any[] )
 	{
-		this.copy = target.map( x => Patch.create( x ) );
+		this.copy = target.map( x => Branch.create( x ) );
 	}
 
 
@@ -316,7 +355,7 @@ class ArrayProxy implements ProxyHandler<any>
 
 	set( target: Object, property: PropertyKey, value: any, receiver: any )
 	{
-		if ( this.isFrozen && this.MUTABLE_METHODS.includes( property ) )
+		if ( this.isFrozen && this.MUTABLE_METHODS.indexOf( property ) >= 0 )
 		{
 			console.error( 'Cannot define property to frozen object!' );
 			return true;
@@ -344,7 +383,7 @@ class ArrayProxy implements ProxyHandler<any>
         {
             return true;
 		}
-		
+
 		if ( property === DIRTY_FLAG )
 		{
 			return this.isDirty;

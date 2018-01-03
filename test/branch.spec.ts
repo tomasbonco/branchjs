@@ -1,13 +1,13 @@
-import { Patch } from "../../src/libraries/patch";
+import { Branch } from "./branch";
 
-describe( 'Patch', () =>
+describe( 'Branch', () =>
 {
 	describe( '#create', () =>
 	{
 		it( 'should provide new reference', () =>
 		{
 			const x: any = { a: 5 };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
 			y.a = 10;
 
@@ -19,8 +19,8 @@ describe( 'Patch', () =>
 		it( 'should work on multiple levels', () =>
 		{
 			const x: any = { a: 5 };
-			const y: any = Patch.create( x );
-			const z: any = Patch.create( y );
+			const y: any = Branch.create( x );
+			const z: any = Branch.create( y );
 
 			y.a = 10;
 			z.a = 20;
@@ -34,7 +34,7 @@ describe( 'Patch', () =>
 		it( 'should work deeply', () =>
 		{
 			const x: any = { a: { b: 5 } };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
 			y.a.b = 10;
 			y.b = { c: 20 };
@@ -49,7 +49,7 @@ describe( 'Patch', () =>
 		it( 'should support Object.assign', () =>
 		{
 			const x: any = { a: 5, b: 6 };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
 			delete y.b;
 			y.c = 7;
@@ -66,7 +66,7 @@ describe( 'Patch', () =>
 		it( 'should support adding into Arrays', () =>
 		{
 			const x: any = { a: [1, 2] };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
 			y.a.push( 10 );
 			y.a.push( 20 );
@@ -80,7 +80,7 @@ describe( 'Patch', () =>
 		it( 'should return proxies when accessing array', () =>
 		{
 			const x: any = { a: [ { b: 6 } ] };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
 			y.a[0].b = 7;
 			
@@ -90,15 +90,15 @@ describe( 'Patch', () =>
 	})
 
 
-	describe( '#isPatch', () =>
+	describe( '#isBranch', () =>
 	{
-		it( 'should return true when target is patch', () =>
+		it( 'should return true when target is branch', () =>
 		{
 			const x: any = { a: 5 };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
-			expect( Patch.isPatch( x ) ).toBe( false );
-			expect( Patch.isPatch( y ) ).toBe( true );
+			expect( Branch.isBranch( x ) ).toBe( false );
+			expect( Branch.isBranch( y ) ).toBe( true );
 		})
 	})
 
@@ -108,12 +108,12 @@ describe( 'Patch', () =>
 		it( 'should do a shallow freeze without deep param', () =>
 		{
 			const x: any = { a: 5, b: { c: 6 } };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
-			Patch.freeze( y );
+			Branch.freeze( y );
 
-			expect( Patch.isFrozen( y ) ).toBe( true );
-			expect( Patch.isFrozen( y.b ) ).toBe( false );
+			expect( Branch.isFrozen( y ) ).toBe( true );
+			expect( Branch.isFrozen( y.b ) ).toBe( false );
 			
 			// Proof that first level is frozen
 			y.c = 10;
@@ -128,12 +128,12 @@ describe( 'Patch', () =>
 		it( 'should do a deep copy, once parameter is set', () => 
 		{
 			const x: any = { a: 5, b: { c: 6 } };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
-			Patch.freeze( y, true );
+			Branch.freeze( y, true );
 
-			expect( Patch.isFrozen( y ) ).toBe( true );
-			expect( Patch.isFrozen( y.b ) ).toBe( true );
+			expect( Branch.isFrozen( y ) ).toBe( true );
+			expect( Branch.isFrozen( y.b ) ).toBe( true );
 
 			// Proof that first level is frozen
 			y.c = 10;
@@ -151,19 +151,19 @@ describe( 'Patch', () =>
 		it( 'should return true, when one object is made from another and has not changed', () =>
 		{
 			const x: any = { a: { b: 6 }, c: [ 2, 5 ] };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
 			expect( x.a ).not.toBe( y.a );
-			expect( Patch.equals( x.a, y.a ) ).toBe( true );
+			expect( Branch.equals( x.a, y.a ) ).toBe( true );
 
 			expect( x.c ).not.toBe( y.c );
-			expect( Patch.equals( x.c, y.c ) ).toBe( true );
+			expect( Branch.equals( x.c, y.c ) ).toBe( true );
 
 			y.a.b = 7;
 			y.c.push( 3 );
 			
-			expect( Patch.equals( x.a, y.a ) ).toBe( false );
-			expect( Patch.equals( x.c, y.c ) ).toBe( false );
+			expect( Branch.equals( x.a, y.a ) ).toBe( false );
+			expect( Branch.equals( x.c, y.c ) ).toBe( false );
 		})	
 	})
 
@@ -173,26 +173,26 @@ describe( 'Patch', () =>
 		it( 'should report true, when something has changed on first level', () =>
 		{
 			const x: any = { a: 5 };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
-			expect( Patch.hasChanged( y ) ).toBe( false );
+			expect( Branch.hasChanged( y ) ).toBe( false );
 			
 			y.a = 6;
 
-			expect( Patch.hasChanged( y ) ).toBe( true );
+			expect( Branch.hasChanged( y ) ).toBe( true );
 		})
 
 
 		it( 'should report when something somewhere has changed', () =>
 		{
 			const x: any = { a: 5, b: [ { c : 6 } ] };
-			const y: any = Patch.create( x );
+			const y: any = Branch.create( x );
 
-			expect( Patch.hasChanged( y ) ).toBe( false );
+			expect( Branch.hasChanged( y ) ).toBe( false );
 			
 			y.b[0].c = 7;
 			
-			expect( Patch.hasChanged( y ) ).toBe( true );
+			expect( Branch.hasChanged( y ) ).toBe( true );
 		})
 	})
 })

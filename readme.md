@@ -1,14 +1,14 @@
-# Patch.js
+# Branch.js
 
 Brings all benefits of immutable structures without the pain of immutable structures.
 
 ## Motivation 
 
-You were told that immutable structures are the way to go. But you have to rebuild whole state every time you do a change. That's a lot of pain. Using getters to access values in object? Or specifing whole tree as an array of strings to specify what to change? Not only it's stupid, it also protects code intelisence from finding errors there. There must be a better way.
+You are being told that immutable structures are the way to go. And then you find out you have to rebuild the whole state every time you do a change. That's a lot of pain. Then you find out other bonuses like using getters to access values in an object. Or specifying what you want to change as an array of strings. Not only it's stupid, it also protects code intellisense from finding errors there. Have you ever been thinking that there must be a better way?
 
-Let's get back to the beginning. You probably don't really want immutable data structures. You want a realiable state, a source of truth. And ideally you don't want it to be mutable. But does it mean it has to be immutable (frozen)? If you had `getState()` function in a store and it would always return a new copy of the state, wouldn't it solve your problem? Then your code may mutate it's own copy and once you're happy with it you can announce it as new state using `setState()`. So what you gain so far? You have a source of truth, because you can't access it (only its copies) you can't mutate it, you are free to do mutations on your copy as you like with the whole power of Javascript and you can even time travel!
+Let's get back to the beginning. You most likely don't need immutable data structures. You want a reliable state, a source of truth. And you don't want it to be mutable. But does it mean it has to be immutable (frozen)? If you had `getState()` function in a store and it would always return a new copy of the state, wouldn't it solve your problem? Then your code (probably reducer) may mutate its own copy of the state and once you're happy with it you can announce it as the new state using `setState()`. So what you gain so far? You have a source of truth. Because you can't access it (only its copies) you can't mutate it. You are free to do mutations on your copy as you like with the whole power of Javascript and you can even time travel! Sounds interesting?
 
-So let's talk about performance now. Doing a copy every time you ask for a state is an consuming operation. Doing conversion from Immutable to Mutable and back to Immutable, would be more consuming but there is a better way. You can create a Proxy instead of making copy. That means new reference without copying. Super fast. That's what Patch.js does and a little more.
+So let's talk about performance now. Doing a copy every time you ask for a state is a consuming operation. Well, doing the conversion from Immutable to Mutable and back would be even more consuming (depends on how is your app written) but there is a better way. You can create a Proxy instead of making a copy. That means you can get the new reference without copying. Super fast. That's what Branch.js does and a little more.
 
 ## Example you are used to see
 
@@ -29,7 +29,7 @@ export class Example
 
 	getState(): { value: number }
 	{
-		return Patch.create( this.state ); // returns new reference without copying
+		return Branch.create( this.state ); // returns new reference without copying
 	}
 
 	increment()
@@ -75,7 +75,7 @@ feedMammals( state, territoryId ) // reducer
     return newZoo;
 }
 
-// Patch.js
+// Branch.js
 feedAnimals( territoryId )
 {
     const zoo = store.getState(); // or pass store state as parameter
@@ -86,6 +86,92 @@ feedAnimals( territoryId )
 }
 ```
 
-## So what's the difference to immer?
+## API
 
-Well, I like immer, even though I never used it. It is more conceptual thing. With immer and other libraries, you are solving the problem on state-creation part. Patch.js is solving the problem in a store in getState() method. So you almost never use it, yet it provides all the magic. Compare that with Immutable.js!
+### create( target: Object|Array )
+
+Creates a new branch of data.
+
+```
+const newState = Branch.create( oldState );
+```
+
+
+## isBranch( target: any )
+
+Returns true, if target was created by Branch.js.
+
+```
+const x = { a: 5 };
+const y = Branch.create( x );
+
+console.log( Branch.isBranch( x ) ); // false
+console.log( Branch.isBranch( y ) ); // true
+```
+
+## freeze( target: Branch, deep: boolean = false)
+
+Freeze object, if you feel like you need it. It works on proxy level and it bans mutating an object.
+
+```
+const state = Branch.create({ x: 5 });
+Branch.freeze( state );
+
+state.x = 10;
+console.log( state.x ); // 5
+```
+
+## isFrozen( target: any )
+
+Returns true, if target is ~~a Disney movie~~ frozen. **It returns false, if object was frozen by Object.freeze(), because it wasn't frozen by Branch.freeze().**
+
+```
+const state = Branch.create({ x: 5 });
+Branch.freeze( state );
+
+console.log( Branch.isFrozen( state ) ); // true
+```
+
+## isDirty( target: any )
+
+Retuns true, if there were made some changes, since object was created. If you want a deep version look at `hasChanged` method.
+
+```
+const state = Branch.create({ a: 5 });
+
+state.y = 10;
+Branch.isDirty( state ); // true
+```
+
+## equals( target: any, target2: any )
+
+This returns true, if both targets are based on the same state and they haven't changed. It doesn't deeply compare objects. Hopefully example will be super clear.
+
+```
+const data = { x: 5 };
+const state1 = Branch.create( data );
+const state2 = Branch.create( data );
+
+Branch.isEqual( data, state1 ); // true
+Branch.isEqual( state1, state1 ); // true
+
+// Compare modified state
+state2.y = 10;
+Branch.isEqual( state1, state2 ); // false, because state2 has mutated
+
+// Compare same content
+const data2 = { x: 5 };
+Branch.isEqual( data2, state1 ); // false, because state1 is based on data1
+```
+
+## hasChanged( target: Object )
+
+Returns true, if something has changed even deeply in Branch.
+
+```
+const state = BRanch.create({ firstLevel: { secondLevel: 10 } });
+state.firstLevel.secondLevel = 20;
+
+Branch.hasChanged( state ); // true
+Branch.hasChanged( state.firstLevel ); // true
+```
