@@ -1,0 +1,23 @@
+{
+  "name": "branchjs",
+  "version": "0.0.1",
+  "description": "Where immutability and mutability meets.",
+  "main": "dist/branch.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomasbonco/branchjs.git"
+  },
+  "author": "Tomáš Bončo",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tomasbonco/branchjs/issues"
+  },
+  "homepage": "https://github.com/tomasbonco/branchjs#readme",
+  "types": "dist/branch.d.ts"
+}

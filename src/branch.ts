@@ -28,9 +28,9 @@ export class Branch
 
 	/**
 	 * Returns true, if target was created using Branch.js
-	 * @param {Object} target - target to be checked
+	 * @param {any} target - target to be checked
 	 */
-    static isBranch( target: Object )
+    static isBranch( target: any )
     {
 		if ( target !== Object( target ) )
 		{
@@ -74,9 +74,9 @@ export class Branch
 	 * @param {Object} target - target to be checked
 	 * @returns {boolean} - true, if object is frozen
 	 */
-    static isFrozen( target: Object ): boolean
+    static isFrozen( target: any ): boolean
     {
-		if ( target !== Object( target ) )
+		if ( ! Branch.isBranch( target ) )
 		{
 			return false;
 		}
@@ -90,9 +90,9 @@ export class Branch
 	 * @param {Object} target - target to be checked
 	 * @returns {boolean} - true, if there were some changes done to object
 	 */
-	static isDirty( target: Object ): boolean
+	static isDirty( target: any ): boolean
 	{
-		if ( target !== Object( target ) )
+		if ( ! Branch.isBranch( target ) )
 		{
 			return false;
 		}
