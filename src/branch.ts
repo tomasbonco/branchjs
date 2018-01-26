@@ -281,8 +281,8 @@ export class ObjectProxy implements ProxyHandler<any>
 
 	ownKeys( target: Object ): PropertyKey[]
 	{
-		const originalKeys: PropertyKey[] = Object.keys( target['__proto__'] );
-		const overridenKeys: PropertyKey[] = Object.keys( this.overrides );
+		const originalKeys: PropertyKey[] = Reflect.ownKeys( target['__proto__'] );
+		const overridenKeys: PropertyKey[] = Reflect.ownKeys( this.overrides );
 		const possibleKeys: PropertyKey[] = originalKeys.concat( overridenKeys );
 		const keys: PropertyKey[] = possibleKeys.filter( key => ! this.deleted.has( key ) );
 		const uniqueKeys = Array.from( new Set( keys ));
